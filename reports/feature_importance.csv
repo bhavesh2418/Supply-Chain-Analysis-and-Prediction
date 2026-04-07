@@ -1,0 +1,16 @@
+Feature,Importance
+Delivery_Status,1.0
+Supplier,0.0
+Product,0.0
+Quantity,0.0
+Unit_Price,0.0
+Total_Cost,0.0
+Warehouse_Location,0.0
+Delivery_Date,0.0
+Logistics_Partner,0.0
+Shipping_Method,0.0
+Cost_Per_Unit,0.0
+Is_High_Value,0.0
+Delivery_Month,0.0
+Delivery_DayOfWeek,0.0
+Delivery_Quarter,0.0

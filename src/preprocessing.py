@@ -5,7 +5,12 @@ preprocessing.py — Cleaning, encoding, feature engineering for supply chain da
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from src.config import PROCESSED_CSV, TARGET_COL
+from src.config import (
+    PROCESSED_CSV, TARGET_COL,
+    COL_DELIVERY_STATUS, COL_QUANTITY, COL_UNIT_PRICE,
+    COL_TOTAL_COST, COL_DELIVERY_DATE, COL_SHIP_METHOD,
+    COL_WAREHOUSE, COL_PRODUCT, COL_SUPPLIER, COL_LOGISTICS,
+)
 
 
 def drop_duplicates(df: pd.DataFrame) -> pd.DataFrame:
@@ -43,35 +48,34 @@ def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Create derived features for supply chain analysis:
-    - Delay_Label       : binary target (1 = delayed)
-    - Lead_Time_Ratio   : actual vs expected lead time ratio
-    - Stock_Cover_Days  : days of inventory cover
-    - Order_Fulfillment_Rate : units shipped / units ordered
-    - Warehouse_Util_Rate    : stock on hand vs warehouse capacity
+    - Delay_Label         : binary target (1 = Delayed, 0 = otherwise)
+    - Cost_Per_Unit       : Total_Cost / Quantity
+    - Is_High_Value       : 1 if Unit_Price > median unit price
+    - Delivery_Month      : month extracted from Delivery_Date
+    - Delivery_DayOfWeek  : day of week from Delivery_Date
     """
     # --- Delay Label (target) ---
-    # Works if column like 'Delivery_Status', 'Late_delivery_risk', or similar exists
-    if "Late_delivery_risk" in df.columns and TARGET_COL not in df.columns:
-        df[TARGET_COL] = df["Late_delivery_risk"].astype(int)
-    elif "Delivery_Status" in df.columns and TARGET_COL not in df.columns:
-        df[TARGET_COL] = (df["Delivery_Status"] != 0).astype(int)
+    if COL_DELIVERY_STATUS in df.columns and TARGET_COL not in df.columns:
+        df[TARGET_COL] = (df[COL_DELIVERY_STATUS] == "Delayed").astype(int)
+        print(f"[preprocessing] Delay_Label: {df[TARGET_COL].sum()} delayed out of {len(df)}")
 
-    # --- Lead Time Ratio ---
-    if "Days_for_shipment_(scheduled)" in df.columns and "Days_for_shipping_(real)" in df.columns:
-        df["Lead_Time_Ratio"] = (
-            df["Days_for_shipping_(real)"] /
-            df["Days_for_shipment_(scheduled)"].replace(0, np.nan)
-        ).fillna(1.0)
+    # --- Cost Per Unit ---
+    if COL_TOTAL_COST in df.columns and COL_QUANTITY in df.columns:
+        df["Cost_Per_Unit"] = (
+            df[COL_TOTAL_COST] / df[COL_QUANTITY].replace(0, np.nan)
+        ).fillna(0)
 
-    # --- Order Fulfillment Rate ---
-    if "Order_Item_Quantity" in df.columns and "Order_Item_Product_Price" in df.columns:
-        df["Revenue_Per_Item"] = (
-            df["Order_Item_Quantity"] * df["Order_Item_Product_Price"]
-        )
+    # --- High Value Item flag ---
+    if COL_UNIT_PRICE in df.columns:
+        median_price = df[COL_UNIT_PRICE].median()
+        df["Is_High_Value"] = (df[COL_UNIT_PRICE] > median_price).astype(int)
 
-    # --- Profit Margin ---
-    if "Order_Item_Profit_Ratio" in df.columns:
-        df["Is_High_Margin"] = (df["Order_Item_Profit_Ratio"] > 0.2).astype(int)
+    # --- Date features ---
+    if COL_DELIVERY_DATE in df.columns:
+        dates = pd.to_datetime(df[COL_DELIVERY_DATE], errors="coerce")
+        df["Delivery_Month"]     = dates.dt.month
+        df["Delivery_DayOfWeek"] = dates.dt.dayofweek
+        df["Delivery_Quarter"]   = dates.dt.quarter
 
     print(f"[preprocessing] Feature engineering complete. Shape: {df.shape}")
     return df

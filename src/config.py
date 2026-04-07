@@ -25,12 +25,25 @@ REPORTS_DIR    = BASE_DIR / "reports"
 NOTEBOOKS_DIR  = BASE_DIR / "notebooks"
 
 # ── Dataset ───────────────────────────────────────────────────────────────────
-KAGGLE_DATASET  = "discovertalent143/supply-chain-dataset"
-RAW_CSV         = DATA_RAW_DIR / "supply_chain_data.csv"
-PROCESSED_CSV   = DATA_PROC_DIR / "supply_chain_processed.csv"
+KAGGLE_DATASET       = "discovertalent143/supply-chain-dataset"
+RAW_CSV              = DATA_RAW_DIR / "Supply_Chain___Logistics_Dataset.csv"
+RAW_OPS_CSV          = DATA_RAW_DIR / "Supply_Chain_Operations_Dataset.csv"
+PROCESSED_CSV        = DATA_PROC_DIR / "supply_chain_processed.csv"
+
+# ── Column names (actual dataset) ─────────────────────────────────────────────
+COL_PRODUCT          = "Product"
+COL_SUPPLIER         = "Supplier"
+COL_WAREHOUSE        = "Warehouse_Location"
+COL_QUANTITY         = "Quantity"
+COL_UNIT_PRICE       = "Unit_Price"
+COL_TOTAL_COST       = "Total_Cost"
+COL_DELIVERY_DATE    = "Delivery_Date"
+COL_LOGISTICS        = "Logistics_Partner"
+COL_SHIP_METHOD      = "Shipping_Method"
+COL_DELIVERY_STATUS  = "Delivery_Status"
 
 # ── Target column ─────────────────────────────────────────────────────────────
-# Delay prediction target (binary: 1 = delayed, 0 = on-time)
+# Binary: 1 = Delayed, 0 = On-time (Delivered / In Transit / Pending)
 TARGET_COL = "Delay_Label"
 
 # ── Model parameters ──────────────────────────────────────────────────────────

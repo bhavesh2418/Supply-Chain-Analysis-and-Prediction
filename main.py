@@ -16,7 +16,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.config import (
     RAW_CSV, PROCESSED_CSV, REPORTS_DIR, TARGET_COL,
     TEST_SIZE, RANDOM_STATE, HOLDING_COST_RATE, ORDERING_COST,
-    LEAD_TIME_DAYS, SAFETY_STOCK_Z
+    LEAD_TIME_DAYS, SAFETY_STOCK_Z,
+    COL_SHIP_METHOD, COL_WAREHOUSE, COL_QUANTITY,
+    COL_UNIT_PRICE, COL_PRODUCT,
 )
 from src.data_loader import load_raw_data, quick_summary
 from src.preprocessing import run_full_preprocessing
@@ -46,8 +48,7 @@ def run_eda(df_raw: pd.DataFrame):
 
 def run_logistics_analysis(df: pd.DataFrame):
     print("\n=== Logistics Performance Analysis ===")
-    # Try common column name variants
-    mode_col = next((c for c in df.columns if "Shipment_Mode" in c or "shipping_type" in c.lower()), None)
+    mode_col  = COL_SHIP_METHOD if COL_SHIP_METHOD in df.columns else None
     delay_col = TARGET_COL if TARGET_COL in df.columns else None
 
     if mode_col and delay_col:
@@ -58,8 +59,8 @@ def run_logistics_analysis(df: pd.DataFrame):
 
 def run_warehouse_analysis(df: pd.DataFrame):
     print("\n=== Warehouse Efficiency Analysis ===")
-    warehouse_col = next((c for c in df.columns if "Warehouse" in c or "warehouse" in c.lower()), None)
-    metric_col = next((c for c in df.columns if "Order_Item_Quantity" in c), None)
+    warehouse_col = COL_WAREHOUSE if COL_WAREHOUSE in df.columns else None
+    metric_col    = COL_QUANTITY if COL_QUANTITY in df.columns else None
 
     if warehouse_col and metric_col:
         plot_warehouse_efficiency(df, warehouse_col, metric_col)
@@ -69,9 +70,9 @@ def run_warehouse_analysis(df: pd.DataFrame):
 
 def run_inventory_optimization(df: pd.DataFrame):
     print("\n=== Inventory Optimization (EOQ + Safety Stock) ===")
-    qty_col  = next((c for c in df.columns if "Order_Item_Quantity" in c), None)
-    cost_col = next((c for c in df.columns if "Product_Price" in c or "Item_Product_Price" in c), None)
-    prod_col = next((c for c in df.columns if "Product_Name" in c or "Product_Category" in c), None)
+    qty_col  = COL_QUANTITY   if COL_QUANTITY   in df.columns else None
+    cost_col = COL_UNIT_PRICE if COL_UNIT_PRICE in df.columns else None
+    prod_col = COL_PRODUCT    if COL_PRODUCT    in df.columns else None
 
     if not all([qty_col, cost_col, prod_col]):
         print(f"[main] Skipping EOQ — required columns not found.")
@@ -79,9 +80,9 @@ def run_inventory_optimization(df: pd.DataFrame):
 
     # Compute EOQ and Safety Stock per product
     summary = df.groupby(prod_col).agg(
-        Avg_Demand=(qty_col, "mean"),
-        Std_Demand=(qty_col, "std"),
-        Unit_Cost=(cost_col, "mean"),
+        Avg_Demand=(qty_col,  "mean"),
+        Std_Demand=(qty_col,  "std"),
+        Unit_Cost=(cost_col,  "mean"),
     ).reset_index()
     summary.columns = ["Product", "Avg_Demand", "Std_Demand", "Unit_Cost"]
     summary["Std_Demand"] = summary["Std_Demand"].fillna(0)

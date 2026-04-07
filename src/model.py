@@ -25,12 +25,11 @@ from src.config import (
 
 
 CLASSIFICATION_MODELS = {
-    "Logistic Regression": LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
+    "Logistic Regression": LogisticRegression(max_iter=5000, random_state=RANDOM_STATE),
     "Decision Tree":       DecisionTreeClassifier(random_state=RANDOM_STATE),
     "Random Forest":       RandomForestClassifier(**RF_PARAMS),
     "Gradient Boosting":   GradientBoostingClassifier(random_state=RANDOM_STATE),
-    "XGBoost":             XGBClassifier(**XGBOOST_PARAMS, eval_metric="logloss",
-                                          use_label_encoder=False),
+    "XGBoost":             XGBClassifier(**XGBOOST_PARAMS, eval_metric="logloss"),
 }
 
 

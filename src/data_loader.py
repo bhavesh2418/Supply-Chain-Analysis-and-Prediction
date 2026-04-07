@@ -20,8 +20,14 @@ def load_raw_data(path: Path = RAW_CSV) -> pd.DataFrame:
     if df.empty:
         raise ValueError("Loaded DataFrame is empty — check the CSV file.")
 
-    # Normalize column names: strip whitespace, replace spaces with underscores
-    df.columns = df.columns.str.strip().str.replace(" ", "_").str.replace("/", "_")
+    # Normalize column names: strip whitespace, replace spaces/slashes with underscores
+    df.columns = (
+        df.columns.str.strip()
+        .str.replace(" ", "_")
+        .str.replace("/", "_")
+        .str.replace("(", "")
+        .str.replace(")", "")
+    )
 
     print(f"[data_loader] Loaded {df.shape[0]:,} rows x {df.shape[1]} columns")
     print(f"[data_loader] Columns: {list(df.columns)}")
