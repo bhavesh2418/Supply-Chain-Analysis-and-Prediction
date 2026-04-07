@@ -1,0 +1,9 @@
+Feature,In_LASSO,In_RFE,In_Both
+Cost_Per_Unit,False,True,False
+Delivery_DayOfWeek,False,True,False
+Delivery_Month,False,True,False
+Delivery_Quarter,False,True,False
+Delivery_Status,True,True,True
+Is_High_Value,False,True,False
+Quantity,True,False,False
+Shipping_Method,False,True,False
