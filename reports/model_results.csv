@@ -1,6 +1,6 @@
 Model,Accuracy,F1 Score,AUC-ROC,CV Accuracy (5-fold)
+Logistic Regression,0.9,0.9033,1.0,0.96
 Decision Tree,1.0,1.0,1.0,1.0
-Gradient Boosting,1.0,1.0,1.0,1.0
 Random Forest,1.0,1.0,1.0,1.0
+Gradient Boosting,1.0,1.0,1.0,1.0
 XGBoost,1.0,1.0,1.0,1.0
-Logistic Regression,0.9,0.9033,0.9524,0.96
