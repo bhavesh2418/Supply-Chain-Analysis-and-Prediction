@@ -1,0 +1,24 @@
+# Core
+numpy
+pandas
+scikit-learn
+xgboost
+
+# Visualization
+matplotlib
+seaborn
+plotly
+
+# Notebooks
+jupyter
+notebook
+ipykernel
+ydata-profiling
+
+# Utilities
+joblib
+python-dotenv
+tqdm
+openpyxl
+kaggle
+fpdf2
