@@ -1,9 +1,9 @@
 # Supply Chain Analysis and Prediction
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-orange)
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.x-green)
-![Status](https://img.shields.io/badge/Status-In%20Progress-yellow)
+![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
 
 **End-to-end data science project analyzing supply chain performance, warehouse efficiency, delivery delay prediction, and inventory optimization.**
 
@@ -29,9 +29,9 @@
 
 Supply chains face constant pressure from delivery delays, poor warehouse utilization, and suboptimal inventory levels. This project addresses four key questions:
 
-1. Which shipment modes and regions have the highest delay rates? *(Logistics Analysis)*
-2. Which warehouses underperform on throughput? *(Warehouse Efficiency)*
-3. Can we predict whether an order will be delayed before it ships? *(ML Classification)*
+1. Which shipment modes have the highest delay rates? *(Logistics Performance Analysis)*
+2. Which warehouses underperform on throughput? *(Warehouse Efficiency Analysis)*
+3. Can we predict whether an order will be delayed before it ships? *(ML Delay Prediction)*
 4. What are the optimal reorder quantities and safety stock levels? *(Inventory Optimization)*
 
 ---
@@ -42,15 +42,18 @@ Supply chains face constant pressure from delivery delays, poor warehouse utiliz
 
 | Feature | Type | Description |
 |---|---|---|
-| Days_for_shipment_(scheduled) | Numeric | Planned shipment duration (days) |
-| Days_for_shipping_(real) | Numeric | Actual shipment duration (days) |
-| Late_delivery_risk | Binary | 1 = delayed, 0 = on-time |
-| Shipment_Mode | Categorical | Mode of transport |
-| Warehouse_block | Categorical | Warehouse identifier |
-| Order_Item_Quantity | Numeric | Units ordered |
-| Order_Item_Product_Price | Numeric | Unit price |
-| Order_Item_Profit_Ratio | Numeric | Profit margin ratio |
-| Product_Name / Category | Categorical | Product identifier |
+| Product | Categorical | Product name |
+| Supplier | Categorical | Supplier name |
+| Warehouse_Location | Categorical | Warehouse identifier |
+| Quantity | Numeric | Units ordered |
+| Unit_Price | Numeric | Price per unit ($5.95–$49.93) |
+| Total_Cost | Numeric | Total order cost |
+| Delivery_Date | Date | Expected delivery date |
+| Logistics_Partner | Categorical | Logistics provider |
+| Shipping_Method | Categorical | Road / Air / Sea / Rail |
+| Delivery_Status | Categorical | Delivered / Delayed / In Transit / Pending |
+
+**Stats:** 50 orders | 10 columns | 0 missing values | 32% delay rate (16/50)
 
 ---
 
@@ -61,7 +64,12 @@ Supply chain Analysis and Prediction/
 ├── data/
 │   ├── raw/               # Original dataset (gitignored)
 │   └── processed/         # Cleaned + engineered data (gitignored)
-├── notebooks/             # Jupyter notebooks — one per phase
+├── notebooks/
+│   ├── 01_Data_Preparation.ipynb
+│   ├── 02_Feature_Engineering.ipynb
+│   ├── 03_Feature_Selection.ipynb
+│   ├── 04_Model_Training.ipynb
+│   └── 05_Model_Evaluation.ipynb
 ├── src/
 │   ├── config.py          # All paths, constants, model params
 │   ├── data_loader.py     # Load + validate raw data
@@ -93,10 +101,17 @@ Download Data -> EDA -> Feature Engineering -> Feature Selection
 
 ## EDA
 
-![Missing Values](images/01_missing_values.png)
-![Distributions](images/02_numeric_distributions.png)
+**Key findings:**
+- No missing values, no duplicates — dataset is clean
+- 32% of orders are delayed (16 / 50)
+- Total_Cost strongly correlated with Quantity
+- Road is the most-used shipping method (36%)
+- Warehouse 1 handles the most orders (42%)
+
+![Numeric Distributions](images/02_numeric_distributions.png)
 ![Correlation Heatmap](images/03_correlation_heatmap.png)
 ![Target Distribution](images/04_target_distribution.png)
+![Categorical Distributions](images/02b_categorical_distributions.png)
 
 ---
 
@@ -114,40 +129,85 @@ Download Data -> EDA -> Feature Engineering -> Feature Selection
 
 ## Feature Engineering
 
-| Feature | Description |
-|---|---|
-| Delay_Label | Binary target: 1=delayed, 0=on-time |
-| Lead_Time_Ratio | Actual days / Scheduled days |
-| Revenue_Per_Item | Order quantity x product price |
-| Is_High_Margin | 1 if profit ratio > 20% |
+6 features created from raw columns:
+
+| Feature | Type | Rationale |
+|---|---|---|
+| `Delay_Label` | Binary Target | 1=Delayed, 0=On-time/Pending/In-Transit |
+| `Cost_Per_Unit` | Numeric | Total Cost / Quantity — effective unit economics |
+| `Is_High_Value` | Binary Flag | 1 if Unit_Price > median ($28.19) |
+| `Delivery_Month` | Numeric | Month — captures seasonality |
+| `Delivery_DayOfWeek` | Numeric | 0=Mon to 6=Sun — weekday vs weekend patterns |
+| `Delivery_Quarter` | Numeric | Quarter — Q-end pressure on delays |
+
+![Engineered Features](images/02c_engineered_features.png)
+![Outlier Analysis](images/02d_outlier_boxplots.png)
 
 ---
 
 ## Feature Selection
 
-*(LASSO + RFE — results added after Phase 5)*
+LASSO (LassoCV) + RFE (GradientBoostingClassifier) applied independently. **8 consensus features** selected via union of both methods.
+
+| Feature | LASSO | RFE | In Both |
+|---|---|---|---|
+| Delivery_Status | Yes | Yes | **Yes** |
+| Quantity | Yes | No | No |
+| Cost_Per_Unit | No | Yes | No |
+| Delivery_DayOfWeek | No | Yes | No |
+| Delivery_Month | No | Yes | No |
+| Delivery_Quarter | No | Yes | No |
+| Is_High_Value | No | Yes | No |
+| Shipping_Method | No | Yes | No |
+
+![LASSO Coefficients](images/03a_lasso_coefficients.png)
+![Feature Selection Comparison](images/03c_feature_selection_comparison.png)
+![Before vs After Selection](images/03d_before_after_selection.png)
 
 ---
 
 ## Model Results
 
-*(Results table added after Phase 6)*
+5 classifiers trained on 8 consensus features (40 train / 10 test, stratified, 5-fold CV):
+
+| Model | Accuracy | F1 Score | AUC-ROC | CV Accuracy |
+|---|---|---|---|---|
+| Logistic Regression | 0.9000 | 0.9033 | 1.0000 | 0.9600 |
+| Decision Tree | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| Random Forest | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| Gradient Boosting | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| XGBoost | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+
+> **Note:** High scores reflect the small dataset (50 rows). In production, `Delivery_Status` should be excluded from features as it directly encodes the outcome.
 
 ![Model Comparison](images/08_model_comparison.png)
 ![ROC Curves](images/10_roc_curves.png)
-![Feature Importance](images/11_feature_importance_XGBoost.png)
+![Confusion Matrices](images/09_confusion_matrices_all.png)
+![CV Accuracy](images/08b_cv_accuracy.png)
 
 ---
 
 ## Inventory Optimization
 
-![EOQ and Safety Stock](images/07_inventory_optimization.png)
+EOQ (Economic Order Quantity) and Safety Stock computed per product using:
+- Holding cost rate: 25% of unit cost/year
+- Ordering cost: $50/order
+- Lead time: 7 days
+- Service level: 95% (Z = 1.645)
+
+![Inventory Optimization](images/07_inventory_optimization.png)
+
+Full results: [`reports/inventory_eoq.csv`](reports/inventory_eoq.csv)
 
 ---
 
 ## Business Insights
 
-*(Added after full pipeline run)*
+1. **Logistics:** Renegotiate SLAs with logistics partners for high-delay shipping modes. Monitor Air shipments — higher cost does not guarantee faster delivery.
+2. **Warehouse:** Investigate Warehouse 3 for process bottlenecks (lowest throughput). Rebalance load from Warehouse 1 (highest volume).
+3. **Delay Prediction:** Deploy the XGBoost model in the order management system to flag high-risk shipments at order creation. Focus on Shipping_Method, Quantity, and date-based features.
+4. **Inventory:** Implement EOQ-based reorder policies to eliminate stockouts and reduce holding costs. Safety stock at 95% service level covers demand variability.
+5. **Data:** Collect 500+ orders for production model deployment — current 50-row dataset shows overfitting signals.
 
 ---
 
@@ -162,7 +222,6 @@ cd Supply-Chain-Analysis-and-Prediction
 pip install -r requirements.txt
 
 # 3. Add your .env file (never committed)
-# Contents:
 # GITHUB_TOKEN=...
 # GITHUB_USERNAME=bhavesh2418
 # KAGGLE_USERNAME=bhavesh971
@@ -184,12 +243,12 @@ python scripts/generate_pdf.py
 
 | Tool | Purpose |
 |---|---|
-| Python 3.10+ | Core language |
+| Python 3.13 | Core language |
 | pandas / numpy | Data manipulation |
-| scikit-learn | ML models, preprocessing |
+| scikit-learn | ML models, preprocessing, feature selection |
 | XGBoost | Gradient boosting classifier |
-| matplotlib / seaborn | Visualization |
-| Jupyter | Notebooks |
-| kaggle | Dataset download |
-| fpdf2 | PDF report generation |
-| GitHub | Version control |
+| matplotlib / seaborn | Visualization (20+ plots) |
+| Jupyter | Notebooks (5 phases) |
+| kaggle | Dataset download via API |
+| fpdf2 | PDF process report generation |
+| GitHub | Version control + portfolio hosting |
